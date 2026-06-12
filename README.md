@@ -1,94 +1,91 @@
 # Marauder - Team Status Monitor
 
-A Flask-based availability tracker and status monitor for teams. Designed and written by **OA (Omid Abduli)**.
+A high-performance Flask-based resource planning and workload visualization platform. Architected and written by **OA (Omid Abduli)**.
 
 ---
 
-## Overview
+## Executive Summary
 
-**Marauder** is a web-based availability management tool designed to track, coordinate, and visualize team member statuses across past, current, and future periods. Utilizing an intuitive, color-coded grid and responsive dark/light modes, it provides high visibility into team workload, potential overloads, and motivation.
-
----
-
-## Features
-
-- **🔴 Color-Coded Availability Indicator Grid**:
-  - 🟢 **Green (Super)**: High motivation, available to help other teams.
-  - 🟡 **Yellow (OK)**: Busy, but everything is under control.
-  - 🟠 **Orange (Full)**: High pressure, no capacity for new tasks.
-  - 🔴 **Red (Overloaded)**: Completely blocked, requires immediate intervention.
-  - ⚪ **Gray (Unset)**: No status defined.
-- **⚙️ Dynamic Admin Panel (`/admin`)**:
-  - Secure configurations protected by verification.
-  - **Switch Languages**: Localize the entire monitor dynamically into German, English, French, or Italian.
-  - **Lock Past Weeks**: Option to prevent normal team members from editing historical week records.
-  - **Limit Past Edits**: Allow changes only within a specified number of past week periods (e.g., last 2 periods).
-  - **Configure Future Horizon**: Add future week periods to plan tasks in advance.
-- **📊 Real-time Motivation & Overload Analytics**:
-  - Dynamic workload summary bar charts.
-  - Visual overload alert banner listing blocked team members.
-- **💾 CSV Data Persistence**:
-  - Saves all status updates automatically into a local `users.csv` database.
-  - No database setup required.
-- **✨ Premium Dark & Light Themes**:
-  - Cohesive glassmorphic components, responsive grid layouts, and smooth animations.
+**Marauder** is an availability management platform designed to track, visualize, and balance team workloads across historical, current, and future periods. Featuring a premium glassmorphic interface, real-time motivational analytics, and automated period management, it empowers organizations to optimize team capacity, proactively identify burnout risks, and streamline project assignments.
 
 ---
 
-## File Structure
+## Core Capabilities & Features
 
-```
+### 📊 Real-Time Workload & Capacity Grid
+* **Visual Capacity Tracking**: Displays current workloads via structured, interactive status indicators:
+  * 🟢 **Optimal Capacity (Green)**: High motivation, fully available for new project assignments.
+  * 🟡 **Stable Load (Yellow)**: Busy, operating at normal capacity.
+  * 🟠 **Intake Limit (Orange)**: Maximum capacity reached; warning threshold where no new tasks should be assigned.
+  * 🔴 **Critical Overload (Red)**: Critical bottleneck; requires immediate management intervention to redistribute tasks.
+* **Timeline Horizon Engine**: Automatically handles period creation and oldest record pruning to maintain a structured 16-week database.
+* **Overload & Risk Analytics**: Displays real-time motivation ratios and system overload banners listing blocked resources for rapid decision-making.
+
+### ⚙️ Secure Administrative Dashboard (`/admin`)
+* **Role-Based Configuration**: Settings panel secured with password-protected API endpoints and in-memory credential storage.
+* **Data Integrity & Edit Locks**: Restricts historical modifications. Administrators can completely lock past weeks or define a specific modification limit (e.g., allow edits only within the last 4 weeks).
+* **Multi-lingual Localization**: Supports instant on-the-fly interface translation with complete dictionaries for:
+  * 🇩🇪 **German (Deutsch)**
+  * 🇬🇧/🇺🇸 **English**
+  * 🇫🇷 **French (Français)**
+  * 🇮🇹 **Italian (Italiano)**
+
+### 📚 Integrated Help & FAQ Assistant
+* **Self-Service Support Drawer**: A dedicated Help modal accessible directly from the dashboard header.
+* **Instant Keyword Filter**: Search and filter operational instructions, capacity guidelines, and system support contacts in real-time.
+* **CSV Dynamic Loading**: Dynamically loads FAQ definitions from a centralized file (`ampel_faq.csv`) for zero-code documentation maintenance.
+
+### 💾 Performance-Optimized Infrastructure
+* **Zero-Configuration Storage**: Relies on a robust, lightweight CSV-based datastore (`users.csv`) for zero-maintenance local deployment.
+* **Cross-Origin Capability**: Backend built on Flask with CORS support to easily allow integration within local corporate networks.
+
+---
+
+## System Architecture & File Layout
+
+```text
 Marauder/
-├── server.py          # Flask backend & REST API endpoints
-├── Interface.html     # Main status tracker UI (HTML/CSS/JS)
-├── admin.html         # Admin configurations dashboard
-├── users.csv          # Local user/status database
-├── settings.json      # Saved admin configuration file (auto-generated)
-├── requirements.txt   # Python dependency packages
+├── server.py          # REST API endpoints & automated database pruning
+├── Interface.html     # Client-side visualization monitor (HTML5/CSS3/ES6)
+├── admin.html         # Secure administrative control board
+├── users.csv          # Local user/status database (comma-separated values)
+├── ampel_faq.csv      # Central FAQ database
+├── settings.json      # Dynamic application settings configuration (ignored in git)
+├── requirements.txt   # Python ecosystem dependencies
 └── .gitignore         # Version control exclusion file
 ```
 
 ---
 
-## Quick Start
+## Deployment & Setup
 
 ### Prerequisites
+* Python 3.7 or higher
+* pip (Python Package Installer)
 
-- Python 3.7+
-- pip (Python package installer)
+### Installation Steps
 
-### Setup & Run
-
-1. **Navigate to the directory**:
+1. **Clone the directory**:
    ```bash
-   cd "Marauder"
+   cd Marauder
    ```
 
-2. **Install dependencies**:
+2. **Install requirements**:
    ```bash
    pip install -r requirements.txt
    ```
 
-3. **Launch the server**:
+3. **Launch the platform server**:
    ```bash
    python server.py
    ```
 
-4. **Access the application**:
-   - Status Monitor: `http://localhost:5005/`
-   - Admin Panel: `http://localhost:5005/admin` (default authorization password: `admin`)
+4. **Access points**:
+   * **Main Status Monitor**: `http://localhost:5005/`
+   * **Administrative Control Board**: `http://localhost:5005/admin` *(Default access password: `admin`)*
 
 ---
 
-## Admin Controls & Settings
+## Project Credits
 
-The Admin page allows managers to customize the monitor's behavior:
-- **Language Selection**: Translates all tooltips, modals, labels, and error messages.
-- **Past Week Modifications**: Enforces locks so users cannot retroactively alter past weeks, supporting data integrity.
-- **Future Weeks count**: Dictates how many future period columns to display on the main grid (e.g., set to `1` or `2` to show upcoming week intervals).
-
----
-
-## Author Credits
-
-Designed, implemented, and maintained by **OA (Omid Abduli)**. Available for redistribution and open-source contribution under version control.
+Architected, designed, and developed by **OA (Omid Abduli)**. Available for local deployment, scalability extensions, and team coordination optimization.
