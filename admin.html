@@ -1,0 +1,545 @@
+<!-- 
+  MARAUDER AVAILABILITY MONITOR - ADMIN PANEL
+  Written / Maintained by: OA (Omid Abduli)
+  
+  This page implements the Admin Controls settings dashboard. Access is restricted 
+  via a Login Screen. Once authenticated, the administrator can toggle past week editing locks,
+  extend the timeline horizon with future week pairs, change the app language, 
+  and update the administrator password itself.
+-->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel - Marauder Team Status Monitor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* Premium visual tokens & palettes matching Marauder visual engine */
+    :root {
+      --bg: #0b1329;
+      --surface: rgba(27, 38, 59, 0.6);
+      --border: rgba(255, 255, 255, 0.08);
+      --border-focus: #3b82f6;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --success: #10b981;
+      --danger: #ef4444;
+      --font-heading: 'Outfit', 'Inter', sans-serif;
+      --font-body: 'Inter', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.1) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.08) 0px, transparent 50%);
+      color: var(--text);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    /* Glassmorphism card block container styling */
+    .card {
+      background: var(--surface);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: clamp(24px, 4vw, 40px);
+      width: min(100%, 540px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    h1 {
+      font-family: var(--font-heading);
+      font-weight: 700;
+      font-size: clamp(24px, 3.5vw, 32px);
+      margin-bottom: 24px;
+      background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-align: center;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      font-weight: 500;
+      font-size: 14px;
+      margin-bottom: 8px;
+      color: var(--text-muted);
+    }
+
+    select, input[type="number"], input[type="password"] {
+      width: 100%;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 15px;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    select:focus, input[type="number"]:focus, input[type="password"]:focus {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+    }
+
+    /* Switch input checkbox custom card */
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(15, 23, 42, 0.4);
+      padding: 14px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      margin-bottom: 20px;
+    }
+
+    .checkbox-group input {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+
+    .checkbox-group label {
+      margin-bottom: 0;
+      cursor: pointer;
+      color: var(--text);
+    }
+
+    .btn-container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 28px;
+    }
+
+    button {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 14px;
+      border-radius: 8px;
+      font-family: var(--font-heading);
+      font-weight: 600;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+
+    button:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+
+    .btn-back {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      box-shadow: none;
+      text-align: center;
+      text-decoration: none;
+      padding: 14px;
+      border-radius: 8px;
+      font-family: var(--font-heading);
+      font-weight: 600;
+      font-size: 16px;
+      display: block;
+      transition: all 0.2s ease;
+    }
+
+    .btn-back:hover {
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Admin Login Screen (Displayed by default) -->
+  <div class="card" id="loginCard">
+    <h1 id="loginTitle">Admin Login</h1>
+    <div id="loginMessage" style="display:none; padding:12px; border-radius:8px; margin-bottom:20px; font-size:14px; font-weight:500;"></div>
+    
+    <form id="loginForm">
+      <div class="form-group">
+        <label for="loginPassword" id="labelLoginPassword">Admin-Passwort</label>
+        <input type="password" id="loginPassword" required placeholder="••••••••">
+      </div>
+      <div class="btn-container">
+        <button type="submit" id="btnLogin">Einloggen</button>
+        <a href="/" class="btn-back" id="btnLoginBack">Zurück zum Monitor</a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Admin Control Settings Screen (Hidden until successfully authenticated) -->
+  <div class="card" id="settingsCard" style="display:none;">
+    <h1 id="settingsTitle">Admin-Einstellungen</h1>
+    <div id="settingsMessage" style="display:none; padding:12px; border-radius:8px; margin-bottom:20px; font-size:14px; font-weight:500;"></div>
+
+    <form id="settingsForm">
+      <div class="form-group">
+        <label for="language" id="labelLanguage">Sprache (Language)</label>
+        <select id="language">
+          <option value="de">Deutsch</option>
+          <option value="en">English</option>
+          <option value="fr">Français</option>
+          <option value="it">Italiano</option>
+        </select>
+      </div>
+
+      <div class="checkbox-group" id="allowPastContainer">
+        <input type="checkbox" id="allowPastChanges" checked>
+        <label for="allowPastChanges" id="labelAllowPast">Bearbeiten vergangener Wochen erlauben</label>
+      </div>
+
+      <div class="form-group" id="limitContainer">
+        <label for="pastWeeksLimit" id="labelPastLimit">Wie viele Wochenpaare in der Vergangenheit können bearbeitet werden?</label>
+        <input type="number" id="pastWeeksLimit" min="0" max="20" placeholder="z.B. 8">
+      </div>
+
+      <div class="form-group">
+        <label for="futurePeriods" id="labelFuturePeriods">Zukünftige Wochenpaare zum Anzeigen (Spalten für die Zukunft)</label>
+        <input type="number" id="futurePeriods" min="0" max="10" placeholder="z.B. 1" required>
+      </div>
+
+      <!-- Password configuration controls -->
+      <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border);">
+        <h3 id="labelChangePasswordHeader" style="margin-bottom: 12px; font-family: var(--font-heading); font-size: 16px; color: var(--text);">Passwort ändern</h3>
+        
+        <div class="form-group">
+          <label for="newPassword" id="labelNewPassword">Neues Passwort</label>
+          <input type="password" id="newPassword" placeholder="••••••••">
+        </div>
+        
+        <div class="form-group">
+          <label for="confirmPassword" id="labelConfirmPassword">Neues Passwort bestätigen</label>
+          <input type="password" id="confirmPassword" placeholder="••••••••">
+        </div>
+      </div>
+
+      <div class="btn-container" style="margin-top: 24px;">
+        <button type="submit" id="btnSave">Speichern</button>
+        <a href="/" class="btn-back" id="btnBack">Zurück zum Monitor</a>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    // Translation resources for localized UI texts
+    const translations = {
+      de: {
+        loginTitle: "Admin Login",
+        labelLoginPassword: "Admin-Passwort",
+        btnLogin: "Einloggen",
+        btnLoginBack: "Zurück zum Monitor",
+        settingsTitle: "Admin-Einstellungen",
+        labelLanguage: "Sprache (Language)",
+        labelAllowPast: "Bearbeiten vergangener Wochen erlauben",
+        labelPastLimit: "Wie viele Wochenpaare in der Vergangenheit können bearbeitet werden?",
+        labelFuturePeriods: "Zukünftige Wochenpaare zum Anzeigen (Spalten für die Zukunft)",
+        labelChangePasswordHeader: "Passwort ändern",
+        labelNewPassword: "Neues Passwort",
+        labelConfirmPassword: "Neues Passwort bestätigen",
+        btnSave: "Speichern",
+        btnBack: "Zurück zum Monitor",
+        saved: "Einstellungen erfolgreich gespeichert!",
+        failed: "Fehler beim Speichern der Einstellungen: ",
+        invalidLogin: "Falsches Admin-Passwort!",
+        passwordsMismatch: "Passwörter stimmen nicht überein!"
+      },
+      en: {
+        loginTitle: "Admin Login",
+        labelLoginPassword: "Admin Password",
+        btnLogin: "Login",
+        btnLoginBack: "Back to Monitor",
+        settingsTitle: "Admin Settings",
+        labelLanguage: "Language",
+        labelAllowPast: "Allow editing past weeks",
+        labelPastLimit: "How many past week pairs (periods) can be edited?",
+        labelFuturePeriods: "Future week pairs to display (columns for the future)",
+        labelChangePasswordHeader: "Change Admin Password",
+        labelNewPassword: "New Password",
+        labelConfirmPassword: "Confirm New Password",
+        btnSave: "Save Settings",
+        btnBack: "Back to Monitor",
+        saved: "Settings saved successfully!",
+        failed: "Failed to save settings: ",
+        invalidLogin: "Incorrect admin password!",
+        passwordsMismatch: "Passwords do not match!"
+      },
+      fr: {
+        loginTitle: "Connexion administrateur",
+        labelLoginPassword: "Mot de passe admin",
+        btnLogin: "Se connecter",
+        btnLoginBack: "Retour au moniteur",
+        settingsTitle: "Paramètres d'administration",
+        labelLanguage: "Langue (Language)",
+        labelAllowPast: "Autoriser la modification des semaines passées",
+        labelPastLimit: "Combien de paires de semaines passées peuvent être modifiées ?",
+        labelFuturePeriods: "Paires de semaines futures à afficher (colonnes pour le futur)",
+        labelChangePasswordHeader: "Changer le mot de passe",
+        labelNewPassword: "Nouveau mot de passe",
+        labelConfirmPassword: "Confirmer le nouveau mot de passe",
+        btnSave: "Enregistrer les paramètres",
+        btnBack: "Retour au moniteur",
+        saved: "Paramètres enregistrés avec succès !",
+        failed: "Échec de l'enregistrement des paramètres : ",
+        invalidLogin: "Mot de passe admin incorrect !",
+        passwordsMismatch: "Les mots de passe ne correspondent pas !"
+      },
+      it: {
+        loginTitle: "Accesso amministratore",
+        labelLoginPassword: "Password amministratore",
+        btnLogin: "Accedi",
+        btnLoginBack: "Torna al monitor",
+        settingsTitle: "Impostazioni amministratore",
+        labelLanguage: "Lingua (Language)",
+        labelAllowPast: "Consenti la modifica delle settimane passate",
+        labelPastLimit: "Quante coppie di settimane passate possono essere modificate?",
+        labelFuturePeriods: "Coppie di settimane future da visualizzare (colonne per il futuro)",
+        labelChangePasswordHeader: "Cambia password",
+        labelNewPassword: "Nuova password",
+        labelConfirmPassword: "Conferma nuova password",
+        btnSave: "Salva impostazioni",
+        btnBack: "Torna al monitor",
+        saved: "Impostazioni salvate con successo!",
+        failed: "Impossibile salvare le impostazioni: ",
+        invalidLogin: "Password amministratore errata!",
+        passwordsMismatch: "Le password non corrispondono!"
+      }
+    };
+
+    let currentLanguage = 'de';
+    let activePassword = ''; // In-memory cache of authenticated password
+
+    // Apply translations to UI elements dynamically
+    function applyLanguage(lang) {
+      currentLanguage = lang;
+      const t = translations[lang] || translations.de;
+      
+      // Update login page elements
+      document.getElementById('loginTitle').textContent = t.loginTitle;
+      document.getElementById('labelLoginPassword').textContent = t.labelLoginPassword;
+      document.getElementById('btnLogin').textContent = t.btnLogin;
+      document.getElementById('btnLoginBack').textContent = t.btnLoginBack;
+      
+      // Update settings page elements
+      document.getElementById('settingsTitle').textContent = t.settingsTitle;
+      document.getElementById('labelLanguage').textContent = t.labelLanguage;
+      document.getElementById('labelAllowPast').textContent = t.labelAllowPast;
+      document.getElementById('labelPastLimit').textContent = t.labelPastLimit;
+      document.getElementById('labelFuturePeriods').textContent = t.labelFuturePeriods;
+      document.getElementById('labelChangePasswordHeader').textContent = t.labelChangePasswordHeader;
+      document.getElementById('labelNewPassword').textContent = t.labelNewPassword;
+      document.getElementById('labelConfirmPassword').textContent = t.labelConfirmPassword;
+      document.getElementById('btnSave').textContent = t.btnSave;
+      document.getElementById('btnBack').textContent = t.btnBack;
+    }
+
+    // Toggle past limit input depending on allow checkbox
+    const allowPastCheckbox = document.getElementById('allowPastChanges');
+    const pastLimitInput = document.getElementById('pastWeeksLimit');
+    
+    allowPastCheckbox.addEventListener('change', () => {
+      pastLimitInput.disabled = !allowPastCheckbox.checked;
+      if (!allowPastCheckbox.checked) {
+        pastLimitInput.value = '';
+      }
+    });
+
+    // Handle language select change in UI
+    document.getElementById('language').addEventListener('change', (e) => {
+      applyLanguage(e.target.value);
+    });
+
+    // Authenticate password with server backend
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const pwdInput = document.getElementById('loginPassword');
+      const msgDiv = document.getElementById('loginMessage');
+      msgDiv.style.display = 'none';
+      msgDiv.className = '';
+      
+      const pwd = pwdInput.value;
+      try {
+        const res = await fetch('/api/admin-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: pwd })
+        });
+        
+        const data = await res.json();
+        const t = translations[currentLanguage] || translations.de;
+        
+        if (res.ok) {
+          // Store credential in session storage so reload stays logged in
+          activePassword = pwd;
+          sessionStorage.setItem('adminPassword', pwd);
+          
+          document.getElementById('loginCard').style.display = 'none';
+          document.getElementById('settingsCard').style.display = 'block';
+          loadSettings();
+        } else {
+          // Display validation error
+          msgDiv.textContent = t.invalidLogin;
+          msgDiv.style.background = 'rgba(239, 68, 68, 0.15)';
+          msgDiv.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+          msgDiv.style.color = 'var(--danger)';
+          msgDiv.style.display = 'block';
+        }
+      } catch (err) {
+        msgDiv.textContent = err.message;
+        msgDiv.style.background = 'rgba(239, 68, 68, 0.15)';
+        msgDiv.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+        msgDiv.style.color = 'var(--danger)';
+        msgDiv.style.display = 'block';
+      }
+    });
+
+    // Load active settings from server
+    async function loadSettings() {
+      try {
+        const res = await fetch('/api/settings');
+        if (res.ok) {
+          const settings = await res.json();
+          document.getElementById('language').value = settings.language || 'de';
+          allowPastCheckbox.checked = settings.allowPastChanges !== false;
+          pastLimitInput.disabled = !allowPastCheckbox.checked;
+          pastLimitInput.value = settings.pastWeeksLimit !== undefined && settings.pastWeeksLimit !== null ? settings.pastWeeksLimit : '';
+          document.getElementById('futurePeriods').value = settings.futurePeriods !== undefined ? settings.futurePeriods : 1;
+          applyLanguage(settings.language || 'de');
+        }
+      } catch (err) {
+        console.error('Failed to load settings:', err);
+      }
+    }
+
+    // Submit settings changes and/or password updates
+    document.getElementById('settingsForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const messageDiv = document.getElementById('settingsMessage');
+      messageDiv.className = '';
+      messageDiv.style.display = 'none';
+
+      const newPassword = document.getElementById('newPassword').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+      const t = translations[currentLanguage] || translations.de;
+
+      // Enforce client side matching password verification
+      if (newPassword || confirmPassword) {
+        if (newPassword !== confirmPassword) {
+          messageDiv.textContent = t.passwordsMismatch;
+          messageDiv.style.background = 'rgba(239, 68, 68, 0.15)';
+          messageDiv.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+          messageDiv.style.color = 'var(--danger)';
+          messageDiv.style.display = 'block';
+          return;
+        }
+      }
+
+      const payload = {
+        language: document.getElementById('language').value,
+        allowPastChanges: allowPastCheckbox.checked,
+        pastWeeksLimit: allowPastCheckbox.checked && pastLimitInput.value !== '' ? parseInt(pastLimitInput.value) : null,
+        futurePeriods: parseInt(document.getElementById('futurePeriods').value),
+        password: activePassword
+      };
+
+      if (newPassword) {
+        payload.newPassword = newPassword;
+      }
+
+      try {
+        const res = await fetch('/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          messageDiv.textContent = t.saved;
+          messageDiv.style.background = 'rgba(16, 185, 129, 0.15)';
+          messageDiv.style.border = '1px solid rgba(16, 185, 129, 0.3)';
+          messageDiv.style.color = 'var(--success)';
+          messageDiv.style.display = 'block';
+          
+          // If password is updated, cache the new one
+          if (newPassword) {
+            activePassword = newPassword;
+            sessionStorage.setItem('adminPassword', newPassword);
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+          }
+          
+          setTimeout(() => {
+            messageDiv.style.display = 'none';
+          }, 3000);
+        } else {
+          messageDiv.textContent = t.failed + (data.message || data.error || res.statusText);
+          messageDiv.style.background = 'rgba(239, 68, 68, 0.15)';
+          messageDiv.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+          messageDiv.style.color = 'var(--danger)';
+          messageDiv.style.display = 'block';
+        }
+      } catch (err) {
+        messageDiv.textContent = t.failed + err.message;
+        messageDiv.style.background = 'rgba(239, 68, 68, 0.15)';
+        messageDiv.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+        messageDiv.style.color = 'var(--danger)';
+        messageDiv.style.display = 'block';
+      }
+    });
+
+    // Handle automatic session resume if already verified previously in session
+    const storedPassword = sessionStorage.getItem('adminPassword');
+    if (storedPassword) {
+      activePassword = storedPassword;
+      document.getElementById('loginCard').style.display = 'none';
+      document.getElementById('settingsCard').style.display = 'block';
+      loadSettings();
+    } else {
+      // Default to German login translations initially
+      applyLanguage('de');
+    }
+  </script>
+</body>
+</html>

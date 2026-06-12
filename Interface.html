@@ -1,0 +1,1558 @@
+<!-- 
+  MARAUDER AVAILABILITY MONITOR - MONITOR VIEW
+  Written / Maintained by: OA (Omid Abduli)
+  This page serves as the main interactive visualization tracker grid.
+  Features glassmorphic aesthetics, translation systems, stats charts, and restrictions.
+-->
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Marauder - Team Status Monitor</title>
+  <style>
+    :root{
+      --bg:#0b1220;--surface:#121a2b;--muted:#0f172a;--border:#1e293b;--text:#e5e7eb;--text-muted:#a3b2c7;--primary:#4f9cf9;
+      --ok:#fbbf24;--green:#10b981;--orange:#f97316;--red:#ef4444;
+      --radius:0.75rem; 
+      /* Responsive sizing using viewport units for consistency */
+      --cell-h:2.5vh; 
+      --cell-w:4.8vw; 
+      --group-w:12vw; 
+      --person-w:14vw;
+      /* Minimum sizes to ensure readability */
+      --min-cell-h:32px;
+      --min-cell-w:60px;
+      --min-group-w:160px;
+      --min-person-w:180px;
+    }
+    [data-theme="light"]{
+      --bg:#ffffff;--surface:#f8fafc;--muted:#f1f5f9;--border:#e5e7eb;--text:#0f172a;--text-muted:#475569;--primary:#2563eb;
+    }
+    *{box-sizing:border-box}
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+      background: var(--bg);
+      color: var(--text);
+      font-size: clamp(14px, 1vw, 18px); /* Responsive font size */
+      line-height: 1.5;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .container{
+      max-width: 100vw;
+      min-width: 320px;
+      margin: 0;
+      padding: clamp(8px, 1vw, 16px);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    /* Header */
+    .header{
+      background:var(--surface);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      padding:clamp(8px, 1vh, 12px) clamp(12px, 1.5vw, 20px);
+      margin-bottom:clamp(8px, 1vh, 16px);
+      flex-shrink: 0;
+    }
+    .header-single-row{
+      display:flex;
+      gap:clamp(8px, 1vw, 12px);
+      align-items:center;
+      justify-content:flex-start;
+      flex-wrap:wrap;
+    }
+    .badge{background:var(--primary);color:#fff;padding:clamp(3px, 0.5vh, 6px) clamp(8px, 1vw, 12px);border-radius:999px;font-size:clamp(10px, 1.2vw, 14px);font-weight:700}
+    select,button{height:clamp(28px, 3.5vh, 36px);border:1px solid var(--border);border-radius:8px;background:var(--muted);color:var(--text);font-size:clamp(11px, 1.2vw, 14px);padding:0 clamp(8px, 1vw, 12px)}
+    select{min-width:clamp(120px, 15vw, 200px)}
+    .btn{cursor:pointer;white-space:nowrap}
+    .btn.pri{background:var(--primary);color:#fff;border-color:var(--primary)}
+    .btn.ghost{background:var(--muted)}
+    select:focus-visible,button:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+    /* Compact Legend */
+    .legend-compact{
+      display:flex;
+      gap:clamp(8px, 1.2vw, 16px);
+      align-items:center;
+      margin-left:auto;
+      font-size:clamp(11px, 1.1vw, 14px);
+    }
+    .legend-compact span{
+      display:flex;
+      align-items:center;
+      gap:clamp(4px, 0.5vw, 6px);
+    }
+    .legend-compact i{display:inline-block;width:clamp(10px, 1.2vw, 14px);height:clamp(10px, 1.2vw, 14px);border-radius:4px;border:1px solid #00000022;vertical-align:-2px}
+    .lg-green{background:var(--green)} 
+    .lg-ok{
+      background:var(--ok) !important;
+      border-radius:50% !important;
+      border:1px solid rgba(0,0,0,0.1) !important;
+    } 
+    .lg-orange{background:var(--orange);background-image:repeating-linear-gradient(45deg,transparent 0 6px,#00000018 6px 12px)}
+    .lg-red{
+      background: transparent !important;
+      width: 0 !important;
+      height: 0 !important;
+      border: none !important;
+      border-left: clamp(6px, 0.8vw, 10px) solid transparent !important;
+      border-right: clamp(6px, 0.8vw, 10px) solid transparent !important;
+      border-bottom: clamp(10px, 1.3vw, 16px) solid var(--red) !important;
+      border-radius: 0 !important;
+      margin-right: clamp(4px, 0.8vw, 8px);
+      vertical-align: -2px;
+    }
+    /* Update legend styles */
+    .lg-ok { 
+      background: var(--ok); 
+      border-radius: 50%;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1), 0 2px 4px rgba(251,191,36,0.3);
+    }
+    .lg-orange { 
+      background: var(--orange);
+      background-image: repeating-linear-gradient(135deg, 
+        transparent 0px 10px, 
+        rgba(0,0,0,0.1) 10px 20px
+      );
+      border: none;
+    }
+
+    /* Custom Tooltip */
+    .custom-tooltip {
+      position: relative;
+      cursor: help;
+    }
+    .custom-tooltip::after {
+      content: attr(data-title);
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%) translateY(4px);
+      padding: clamp(8px, 1vh, 12px) clamp(12px, 1.5vw, 16px);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: clamp(12px, 1.1vw, 14px);
+      font-weight: 500;
+      border-radius: 8px;
+      white-space: normal;
+      width: max-content;
+      max-width: clamp(240px, 30vw, 320px);
+      z-index: 100;
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.15), 0 8px 10px -6px rgba(0,0,0,0.1);
+      pointer-events: none;
+      line-height: 1.5;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    [data-theme="dark"] .custom-tooltip::after {
+      background: #1e293b;
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.6), 0 8px 10px -6px rgba(0,0,0,0.4);
+    }
+    .custom-tooltip:hover::after {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(-50%) translateY(8px);
+    }
+    /* Shift left for last two elements to avoid edge cutoff */
+    .custom-tooltip:nth-last-child(1)::after,
+    .custom-tooltip:nth-last-child(2)::after {
+      left: auto;
+      right: -10px;
+      transform: translateX(0) translateY(4px);
+    }
+    .custom-tooltip:nth-last-child(1):hover::after,
+    .custom-tooltip:nth-last-child(2):hover::after {
+      transform: translateX(0) translateY(8px);
+    }
+
+    /* Grid */
+    .grid-wrap{
+      background:var(--surface);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      overflow:hidden;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .grid-scroll{
+      overflow:auto;
+      flex: 1;
+      min-height: 0;
+    }
+    .grid{
+      --period-count:8;
+      display:grid; 
+      grid-auto-rows: max(var(--cell-h), var(--min-cell-h));
+      grid-template-columns: max(var(--group-w), var(--min-group-w)) max(var(--person-w), var(--min-person-w)) repeat(var(--period-count), max(var(--cell-w), var(--min-cell-w)));
+      min-width:fit-content;
+    }
+    .cell{
+      border-right:1px solid var(--border);border-bottom:1px solid var(--border);
+      display:flex;align-items:center;justify-content:center;font-size:clamp(10px, 1.2vw, 14px);background:var(--surface)
+    }
+    /* Sticky header row */
+    .cell.h{position:sticky;top:0;z-index:20;background:var(--muted);font-weight:800;color:var(--text-muted)}
+    .cell.h.cur{background:var(--primary);color:#fff}
+    .cell.h.c1{left:0}
+    .cell.h.c2{left:max(var(--group-w), var(--min-group-w))}
+    /* Year boundary separator - thicker left border to show new year */
+    .cell.h.year-boundary{
+      border-left:3px solid var(--primary);
+      padding-left:calc(clamp(8px, 1vw, 12px) - 2px);
+      margin-left:-1px;
+    }
+    [data-theme="light"] .cell.h.year-boundary{
+      border-left-color:var(--primary);
+      opacity:0.8;
+    }
+    /* Also add separator to status cells in the same column */
+    .cell.status.year-boundary{
+      border-left:3px solid var(--primary);
+      margin-left:-1px;
+    }
+    [data-theme="light"] .cell.status.year-boundary{
+      border-left-color:var(--primary);
+      opacity:0.8;
+    }
+    [data-theme="dark"] .cell.h.year-boundary,
+    [data-theme="dark"] .cell.status.year-boundary{
+      border-left-color:var(--primary);
+      opacity:0.7;
+    }
+    /* Sticky group + person columns */
+    .group{
+      position:sticky;left:0;z-index:15;background:var(--muted);
+      font-weight:400;justify-content:flex-start;padding:0 12px;border-right:2px solid var(--border)
+    }
+    .group .pill{
+      display:inline-flex;align-items:center;gap:clamp(6px, 0.8vw, 10px);font-weight:400;font-size:clamp(10px, 1.1vw, 14px);padding:clamp(4px, 0.6vh, 8px) clamp(6px, 1vw, 12px);border-radius:999px;
+      background:color-mix(in srgb, var(--gcolor) 18%, var(--muted));
+      border:1px solid color-mix(in srgb, var(--gcolor) 40%, var(--border));
+    }
+    .group .rail{width:clamp(6px, 0.8vw, 10px);height:clamp(10px, 1.5vh, 16px);border-radius:6px;background:var(--gcolor)}
+    .person{
+      position:sticky;left:max(var(--group-w), var(--min-group-w));z-index:10;background:var(--muted);
+      justify-content:flex-start;padding:0 clamp(8px, 1vw, 16px);gap:clamp(6px, 1vw, 12px);font-weight:700
+    }
+    .chip{
+      font-size:clamp(9px, 1vw, 12px);font-weight:900;letter-spacing:.5px;padding:clamp(1px, 0.3vh, 3px) clamp(4px, 0.6vw, 8px);border-radius:6px;background:var(--surface);border:1px solid var(--border);opacity:.85
+    }
+    /* Bands to show group visually (subtle) */
+    .band{background:color-mix(in srgb, var(--gcolor) 7%, var(--surface))}
+    .status.readonly{cursor:not-allowed;opacity:.7}
+    .status.editable{cursor:pointer}
+    .status.editable:hover{background:color-mix(in srgb, var(--gcolor) 14%, var(--surface))}
+    .light{width:clamp(12px, 1.6vw, 20px);height:clamp(12px, 1.6vw, 20px);border-radius:4px;border:1px solid #00000022}
+    .light.green{background:var(--green)}
+    .light.yellow{background:var(--ok);border-radius:50%}
+    .light.orange{background:var(--orange);background-image:repeating-linear-gradient(135deg,transparent 0 10px,rgba(0,0,0,0.1) 10px 20px)}
+    .light.red{
+      background:transparent;
+      border:none;
+      width:0;
+      height:0;
+      border-left:clamp(6px, 0.8vw, 10px) solid transparent;
+      border-right:clamp(6px, 0.8vw, 10px) solid transparent;
+      border-bottom:clamp(10px, 1.3vw, 16px) solid var(--red);
+    }
+    .light.unset{background:transparent}
+    /* Row highlight */
+    .hl{background:#1e40af !important;color:#ffffff !important;border:2px solid #3b82f6 !important}
+    [data-theme="light"] .hl{background:#dbeafe !important;color:#1e40af !important;border:2px solid #3b82f6 !important}
+    /* Stats + info */
+    .stats {
+      display: flex;
+      flex-direction: column;
+      gap: clamp(8px, 1vh, 16px);
+      padding: clamp(12px, 1.5vh, 20px) clamp(16px, 2vw, 24px);
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+      box-shadow: 0 -2px 12px rgba(0,0,0,0.1);
+    }
+    
+    /* Dark mode specific styling */
+    [data-theme="dark"] .stats {
+      background: #0a0f1a !important;
+      border-top: 1px solid rgba(79, 172, 254, 0.4) !important;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.5) !important;
+    }
+
+    .stat-bar-container {
+      height: clamp(22px, 2.8vh, 32px);
+      width: 100%;
+      background: var(--bg);
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      position: relative;
+      border: 1px solid var(--border);
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    /* Dark mode styling */
+    [data-theme="dark"] .stat-bar-container {
+      background: #050810 !important;
+      border: 1px solid rgba(79, 172, 254, 0.3) !important;
+      box-shadow: inset 0 3px 8px rgba(0,0,0,0.7), 0 2px 6px rgba(0,0,0,0.4) !important;
+    }
+
+    .stat-bar {
+      height: 100%;
+      transition: width 0.5s ease;
+    }
+
+    .stat-bar.green { background: var(--green); }
+    .stat-bar.yellow { background: var(--ok); }
+    .stat-bar.orange { background: var(--orange); }
+    .stat-bar.red { background: var(--red); }
+
+    .stat-label {
+      position: absolute;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: clamp(10px, 1.2vw, 14px);
+      font-weight: 600;
+      padding: 0 clamp(6px, 0.8vw, 12px);
+      text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+      white-space: nowrap;
+    }
+    
+    /* Dark mode text styling */
+    [data-theme="dark"] .stat-label {
+      color: rgba(255,255,255,0.95) !important;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.9) !important;
+      font-weight: 700 !important;
+    }
+
+    /* New styles for header notification */
+    .notify {
+      background: var(--primary);
+      color: white;
+      padding: clamp(3px, 0.5vh, 6px) clamp(8px, 1.2vw, 16px);
+      border-radius: 8px;
+      font-size: clamp(12px, 1.4vw, 16px);
+      font-weight: 500;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      white-space: nowrap;
+      max-width: clamp(200px, 25vw, 400px);
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .notify.show {
+      opacity: 1;
+    }
+    
+    /* Media queries for extreme screen sizes */
+    @media (max-width: 768px) {
+      .header-single-row {
+        gap: 6px;
+      }
+      select {
+        min-width: 100px;
+      }
+      .legend-compact {
+        width: 100%;
+        justify-content: center;
+        margin-left: 0;
+      }
+    }
+    
+    @media (min-width: 2560px) {
+      :root {
+        --cell-h: 3vh;
+        --cell-w: 3.5vw;
+        --group-w: 10vw;
+        --person-w: 12vw;
+      }
+    }
+    
+    @media (max-height: 600px) {
+      .container {
+        padding: clamp(4px, 0.5vh, 8px);
+      }
+      .header {
+        padding: clamp(8px, 1vh, 12px);
+      }
+    }
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="header-single-row">
+        <span class="badge" id="badge">KW …</span>
+        <span class="notify" id="notify"></span>
+        <select id="userSelect" aria-label="Person auswählen"></select>
+        <button class="btn pri" id="addUserBtn" type="button">+ Person</button>
+        <button class="btn ghost" id="editUserBtn" type="button" disabled>Bearbeiten</button>
+        <a class="btn ghost" id="adminBtn" href="/admin" style="display:flex;align-items:center;gap:6px;text-decoration:none;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          <span id="adminBtnText">Admin Panel</span>
+        </a>
+        <button class="btn ghost" id="faqBtn" type="button" style="display:flex;align-items:center;gap:6px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+          <span id="faqBtnText">Hilfe & FAQ</span>
+        </button>
+        <div class="legend-compact">
+          <span class="custom-tooltip" data-title="Alles läuft gut! Ich bin motiviert und habe Luft in meinem Zeitplan. Kommt gerne auf mich zu, wenn ihr Unterstützung oder Hilfe braucht."><i class="lg-green"></i>Grün</span>
+          <span class="custom-tooltip" data-title="Ich bin gut beschäftigt, habe aber alles im Griff. Ich muss mich voll auf meine aktuellen Aufgaben konzentrieren, also sprecht euch bitte mit mir ab, bevor ihr mir Neues zuweist."><i class="lg-ok"></i>Gelb</span>
+          <span class="custom-tooltip" data-title="Ich spüre den Druck. Ich jongliere mit zu vielen Themen und muss strikt priorisieren. Wahrscheinlich muss ich bald Aufgaben abgeben oder aktiv um Hilfe bitten."><i class="lg-orange"></i>Orange</span>
+          <span class="custom-tooltip" data-title="Ich bin am Limit oder komplett blockiert. Es geht gerade nicht weiter. Ich brauche sofort jemanden aus dem Team oder GF, der einspringt und mir hilft, umzuverteilen oder Aufgaben zu übernehmen."><i class="lg-red"></i>Rot</span>
+        </div>
+      </div>
+    </header>
+
+    <section class="grid-wrap">
+      <div class="grid-scroll">
+        <div class="grid" id="grid" aria-live="polite" aria-busy="false"></div>
+      </div>
+      <div class="stats">
+        <div class="stat-bar-container">
+          <div class="stat-bar green" id="superBar" style="width:0%">
+            <span class="stat-label" id="superLabel"></span>
+          </div>
+          <div class="stat-bar yellow" id="okBar" style="width:0%">
+            <span class="stat-label" id="okLabel"></span>
+          </div>
+          <div class="stat-bar orange" id="fullBar" style="width:0%">
+            <span class="stat-label" id="fullLabel"></span>
+          </div>
+          <div class="stat-bar red" id="overBar" style="width:0%">
+            <span class="stat-label" id="overLabel"></span>
+          </div>
+        </div>
+        <div id="redUsersList" style="display:none;margin-top:8px;padding:8px 12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span id="redUsersTitle" style="font-weight:700;color:var(--red);display:flex;align-items:center;gap:4px;">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style="flex-shrink:0;">
+                <path d="M8 1L1 15h14L8 1z"/>
+              </svg>
+              Überlastung:
+            </span>
+            <span id="redUsersNames" style="color:var(--text);font-size:clamp(11px,1.2vw,14px);"></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Remove old notification element at bottom -->
+    <!-- <div class="info" id="info" hidden><span aria-live="polite" id="infoText"></span></div> -->
+  </div>
+
+  <!-- Add Modal -->
+  <div class="modal" id="addModal" style="display:none;position:fixed;inset:0;place-items:center;background:rgba(0,0,0,.45);z-index:1000">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;max-width:480px;width:min(92%,480px)">
+      <h3 style="margin:0 0 10px 0">Neue Person hinzufügen</h3>
+      <div style="display:grid;gap:10px">
+        <label>Name<br><input id="newName" style="width:100%;height:36px;border:1px solid var(--border);border-radius:8px;background:var(--muted);color:var(--text);padding:0 10px"></label>
+        <label>Gruppe<br>
+          <select id="newGroup" style="width:100%;height:36px;border:1px solid var(--border);border-radius:8px;background:var(--muted);color:var(--text);padding:0 10px">
+            <option value="1">OG Polyplan</option><option value="2">UG Polyplan</option>
+            <option value="3">OG Bauphysik</option><option value="4">UG Bauphysik</option>
+            <option value="5">Gesamtleitung</option><option value="6">TGA</option>
+          </select>
+        </label>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+        <button class="btn ghost" id="addCancel">Abbrechen</button>
+        <button class="btn pri" id="addSave">Hinzufügen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Modal -->
+  <div class="modal" id="editModal" style="display:none;position:fixed;inset:0;place-items:center;background:rgba(0,0,0,.45);z-index:1000">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;max-width:480px;width:min(92%,480px)">
+      <h3 style="margin:0 0 10px 0">Name bearbeiten</h3>
+      <div style="display:grid;gap:10px">
+        <label>Name<br><input id="editName" style="width:100%;height:36px;border:1px solid var(--border);border-radius:8px;background:var(--muted);color:var(--text);padding:0 10px"></label>
+        <label>Gruppe<br>
+          <select id="editGroup" style="width:100%;height:36px;border:1px solid var(--border);border-radius:8px;background:var(--muted);color:var(--text);padding:0 10px">
+          </select>
+        </label>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+        <button class="btn ghost" id="editCancel">Abbrechen</button>
+        <button class="btn pri" id="editSave">Speichern</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAQ Modal -->
+  <div class="modal" id="faqModal" style="display:none;position:fixed;inset:0;place-items:center;background:rgba(0,0,0,.45);z-index:1000">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;max-width:680px;width:min(92%,680px);display:flex;flex-direction:column;max-height:80vh;box-shadow:0 20px 40px rgba(0,0,0,0.4);animation:fadeIn 0.3s ease;">
+      <h3 style="margin:0 0 16px 0;font-family:var(--font-heading, 'Outfit', sans-serif);font-size:22px;">Hilfe & FAQ</h3>
+      <input id="faqSearch" type="text" placeholder="Suchen nach Fragen oder Begriffen..." style="width:100%;height:38px;border:1px solid var(--border);border-radius:8px;background:var(--muted);color:var(--text);padding:0 12px;margin-bottom:16px;outline:none;font-size:14px;" autocomplete="off">
+      <div id="faqList" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:4px;padding-right:8px;margin-bottom:16px;min-height:200px;">
+        <!-- Loaded dynamic Q&A list goes here -->
+      </div>
+      <div style="display:flex;justify-content:flex-end;border-top:1px solid var(--border);padding-top:14px;">
+        <button class="btn ghost" id="faqClose" style="min-width:100px;">Schließen</button>
+      </div>
+    </div>
+  </div>
+
+
+  <script type="module">
+    // ========= helpers =========
+    const $ = (s, r=document)=>r.querySelector(s);
+    const $$ = (s, r=document)=>[...r.querySelectorAll(s)];
+    // Replace hardcoded GROUPS and COLORS with dynamic collections
+    const groupColors = new Map(); // Will be populated from CSV data
+    let uniqueGroups = []; // Will store ordered list of groups
+
+    const STATUS = ['green','yellow','orange','red'];
+    
+    let settings = {
+      language: "de",
+      allowPastChanges: true,
+      pastWeeksLimit: 8,
+      futurePeriods: 1
+    };
+
+    const translations = {
+      de: {
+        kw: "KW",
+        choosePerson: "-- Person auswählen --",
+        addPersonBtn: "+ Person",
+        editPersonBtn: "Bearbeiten",
+        greenTooltip: "Alles läuft gut! Ich bin motiviert und habe Luft in meinem Zeitplan. Kommt gerne auf mich zu, wenn ihr Unterstützung oder Hilfe braucht.",
+        yellowTooltip: "Ich bin gut beschäftigt, habe aber alles im Griff. Ich muss mich voll auf meine aktuellen Aufgaben konzentrieren, also sprecht euch bitte mit mir ab, bevor ihr mir Neues zuweist.",
+        orangeTooltip: "Ich spüre den Druck. Ich jongliere mit zu vielen Themen und muss strikt priorisieren. Wahrscheinlich muss ich bald Aufgaben abgeben oder aktiv um Hilfe bitten.",
+        redTooltip: "Ich bin am Limit oder komplett blockiert. Es geht gerade nicht weiter. Ich brauche sofort jemanden aus dem Team oder GF, der einspringt und mir hilft, umzuverteilen oder Aufgaben zu übernehmen.",
+        greenLabel: "Grün",
+        yellowLabel: "Gelb",
+        orangeLabel: "Orange",
+        redLabel: "Rot",
+        overload: "Überlastung:",
+        addTitle: "Neue Person hinzufügen",
+        addName: "Name",
+        addGroup: "Gruppe",
+        btnCancel: "Abbrechen",
+        btnAdd: "Hinzufügen",
+        editTitle: "Name bearbeiten",
+        btnSave: "Speichern",
+        statusSuper: "Super",
+        statusOk: "OK",
+        statusFull: "Voll mit Annahmestopp",
+        statusOverload: "Überlastung",
+        clickToSet: "Klicken zum Setzen",
+        selectToEdit: "Person auswählen zum Bearbeiten",
+        selectPersonFirst: "Bitte erst eine Person auswählen",
+        selectThisPersonFirst: "Bitte wählen Sie diese Person aus, um den Status zu ändern",
+        dataNotFound: "Keine Daten gefunden",
+        errorLoading: "Fehler beim Laden der Daten",
+        addedMessage: "wurde hinzugefügt",
+        updatedMessage: "wurde aktualisiert",
+        enterNameWarning: "Bitte geben Sie einen Namen ein",
+        selectGroupWarning: "Bitte wählen Sie eine Gruppe",
+        saveError: "⚠ Fehler beim Speichern! Bitte versuchen Sie es erneut.",
+        pastEditDisabled: "⚠ Das Bearbeiten vergangener Wochen ist laut Administrator-Einstellungen deaktiviert.",
+        pastLimitExceeded: "⚠ Sie können nur bis zu {limit} Wochenpaare in der Vergangenheit bearbeiten.",
+        groupPlaceholder: "Keine Gruppen",
+        adminPanel: "Admin Panel",
+        faqBtnText: "Hilfe & FAQ",
+        faqTitle: "Hilfe & FAQ",
+        faqSearchPlaceholder: "Suchen nach Fragen oder Begriffen...",
+        faqNoResults: "Keine passenden FAQ-Einträge gefunden.",
+        faqClose: "Schließen"
+      },
+      en: {
+        kw: "CW",
+        choosePerson: "-- Select Person --",
+        addPersonBtn: "+ Person",
+        editPersonBtn: "Edit",
+        greenTooltip: "Everything is going well! I am motivated and have availability in my schedule. Feel free to reach out to me if you need support or help.",
+        yellowTooltip: "I am busy but have everything under control. I need to focus fully on my current tasks, so please coordinate with me before assigning new ones.",
+        orangeTooltip: "I am feeling the pressure. I am juggling too many topics and must strictly prioritize. I will probably need to delegate tasks or actively ask for help soon.",
+        redTooltip: "I am at my limit or completely blocked. It cannot go on like this. I need someone from the team or management to step in and help redistribute tasks immediately.",
+        greenLabel: "Green",
+        yellowLabel: "Yellow",
+        orangeLabel: "Orange",
+        redLabel: "Red",
+        overload: "Overload:",
+        addTitle: "Add New Person",
+        addName: "Name",
+        addGroup: "Group",
+        btnCancel: "Cancel",
+        btnAdd: "Add",
+        editTitle: "Edit Name",
+        btnSave: "Save",
+        statusSuper: "Super",
+        statusOk: "OK",
+        statusFull: "Full with intake stop",
+        statusOverload: "Overloaded",
+        clickToSet: "Click to set",
+        selectToEdit: "Select person to edit",
+        selectPersonFirst: "Please select a person first",
+        selectThisPersonFirst: "Please select this person to change status",
+        dataNotFound: "No data found",
+        errorLoading: "Error loading data",
+        addedMessage: "has been added",
+        updatedMessage: "has been updated",
+        enterNameWarning: "Please enter a name",
+        selectGroupWarning: "Please select a group",
+        saveError: "⚠ Error saving! Please try again.",
+        pastEditDisabled: "⚠ Editing past weeks is disabled by admin settings.",
+        pastLimitExceeded: "⚠ You can only edit up to {limit} past week pairs.",
+        groupPlaceholder: "No Groups",
+        adminPanel: "Admin Panel",
+        faqBtnText: "Help & FAQ",
+        faqTitle: "Help & FAQ",
+        faqSearchPlaceholder: "Search for questions or topics...",
+        faqNoResults: "No matching FAQ entries found.",
+        faqClose: "Close"
+      },
+      fr: {
+        kw: "Sem",
+        choosePerson: "-- Sélectionner une personne --",
+        addPersonBtn: "+ Personne",
+        editPersonBtn: "Modifier",
+        greenTooltip: "Tout va bien ! Je suis motivé(e) et j'ai de la disponibilité. N'hésitez pas à me contacter si vous avez besoin de soutien ou d'aide.",
+        yellowTooltip: "Je suis bien occupé(e) mais je gère. Je dois me concentrer sur mes tâches actuelles, merci de vous coordonner avec moi avant de m'en attribuer de nouvelles.",
+        orangeTooltip: "Je ressens la pression. Je jongle avec trop de sujets et dois prioriser strictement. Je devrai probablement déléguer ou demander de l'aide bientôt.",
+        redTooltip: "Je suis à la limite ou complètement bloqué(e). Cela ne peut plus durer. J'ai besoin que quelqu'un prenne le relais immédiatement pour redistribuer le travail.",
+        greenLabel: "Vert",
+        yellowLabel: "Jaune",
+        orangeLabel: "Orange",
+        redLabel: "Rouge",
+        overload: "Surcharge :",
+        addTitle: "Ajouter une nouvelle personne",
+        addName: "Nom",
+        addGroup: "Groupe",
+        btnCancel: "Annuler",
+        btnAdd: "Ajouter",
+        editTitle: "Modifier le nom",
+        btnSave: "Enregistrer",
+        statusSuper: "Super",
+        statusOk: "OK",
+        statusFull: "Plein avec arrêt de prise en charge",
+        statusOverload: "Surchargé",
+        clickToSet: "Cliquer pour définir",
+        selectToEdit: "Sélectionner une personne pour modifier",
+        selectPersonFirst: "Veuillez d'abord sélectionner une personne",
+        selectThisPersonFirst: "Veuillez sélectionner cette personne pour modifier son statut",
+        dataNotFound: "Aucune donnée trouvée",
+        errorLoading: "Erreur lors du chargement des données",
+        addedMessage: "a été ajouté(e)",
+        updatedMessage: "a été mis(e) à jour",
+        enterNameWarning: "Veuillez saisir un nom",
+        selectGroupWarning: "Veuillez sélectionner un groupe",
+        saveError: "⚠ Erreur lors de l'enregistrement ! Veuillez réessayer.",
+        pastEditDisabled: "⚠ La modification des semaines passées est désactivée par l'administrateur.",
+        pastLimitExceeded: "⚠ Vous ne pouvez modifier que jusqu'à {limit} paires de semaines passées.",
+        groupPlaceholder: "Aucun groupe",
+        adminPanel: "Admin Panel",
+        faqBtnText: "Aide & FAQ",
+        faqTitle: "Aide & FAQ",
+        faqSearchPlaceholder: "Rechercher des questions ou sujets...",
+        faqNoResults: "Aucune entrée de FAQ correspondante trouvée.",
+        faqClose: "Fermer"
+      },
+      it: {
+        kw: "Sett",
+        choosePerson: "-- Seleziona persona --",
+        addPersonBtn: "+ Persona",
+        editPersonBtn: "Modifica",
+        greenTooltip: "Tutto sta andando bene! Sono motivato(a) e ho spazio nel mio programma. Sentiti libero(a) di contattarmi se hai bisogno di supporto.",
+        yellowTooltip: "Sono occupato(a) ma ho tutto sotto controllo. Devo concentrarmi sui miei compiti attuali, quindi coordiniamoci prima di assegnarmene di nuovi.",
+        orangeTooltip: "Sento la pressione. Sto gestendo troppi argomenti e devo dare priorità rigorosa. Probabilmente dovrò delegare o chiedere aiuto a breve.",
+        redTooltip: "Sono al limite o completamente bloccato(a). Non può continuare così. Ho bisogno che qualcuno intervenga subito per ridistribuire il lavoro.",
+        greenLabel: "Verde",
+        yellowLabel: "Giallo",
+        orangeLabel: "Arancione",
+        redLabel: "Rosso",
+        overload: "Sovraccarico:",
+        addTitle: "Aggiungi nuova persona",
+        addName: "Nome",
+        addGroup: "Gruppe",
+        btnCancel: "Annulla",
+        btnAdd: "Aggiungi",
+        editTitle: "Modifica nome",
+        btnSave: "Salva",
+        statusSuper: "Super",
+        statusOk: "OK",
+        statusFull: "Completo con blocco inserimento",
+        statusOverload: "Sovraccarico",
+        clickToSet: "Clicca per impostare",
+        selectToEdit: "Seleziona una persona per modificare",
+        selectPersonFirst: "Seleziona prima una persona",
+        selectThisPersonFirst: "Seleziona questa persona per modificare lo stato",
+        dataNotFound: "Nessun dato trovato",
+        errorLoading: "Errore nel caricamento dei dati",
+        addedMessage: "è stato aggiunto",
+        updatedMessage: "è stato aggiornato",
+        enterNameWarning: "Inserisci un nome",
+        selectGroupWarning: "Seleziona un gruppo",
+        saveError: "⚠ Errore durante il salvataggio! Riprova.",
+        pastEditDisabled: "⚠ La modifica delle settimane passate è disabilitata dalle impostazioni admin.",
+        pastLimitExceeded: "⚠ Puoi modificare solo fino a {limit} coppie di settimane passate.",
+        groupPlaceholder: "Nessun gruppo",
+        adminPanel: "Admin Panel",
+        faqBtnText: "Aiuto & FAQ",
+        faqTitle: "Aiuto & FAQ",
+        faqSearchPlaceholder: "Cerca domande o argomenti...",
+        faqNoResults: "Nessuna voce FAQ corrispondente trovata.",
+        faqClose: "Chiudi"
+      }
+    };
+
+    const statusName = s => ({
+      green: translations[settings.language].statusSuper,
+      yellow: translations[settings.language].statusOk,
+      orange: translations[settings.language].statusFull,
+      red: translations[settings.language].statusOverload
+    })[s];
+
+    async function loadSettings() {
+      try {
+        const res = await fetch('/api/settings');
+        if (res.ok) {
+          settings = await res.json();
+          console.log('⚙️ Settings loaded:', settings);
+        }
+      } catch (err) {
+        console.error('Failed to load settings:', err);
+      }
+    }
+
+    function applyTranslations() {
+      const t = translations[settings.language] || translations.de;
+      
+      $('#addUserBtn').textContent = t.addPersonBtn;
+      $('#editUserBtn').textContent = t.editPersonBtn;
+      $('#adminBtnText').textContent = t.adminPanel;
+      
+      // Apply FAQ translations
+      $('#faqBtnText').textContent = t.faqBtnText;
+      const faqModal = $('#faqModal');
+      if (faqModal) {
+        $('h3', faqModal).textContent = t.faqTitle;
+        $('#faqSearch').placeholder = t.faqSearchPlaceholder;
+        $('#faqClose').textContent = t.faqClose;
+      }
+      
+      const legendItems = $$('.legend-compact span');
+      if (legendItems.length >= 4) {
+        legendItems[0].dataset.title = t.greenTooltip;
+        legendItems[0].innerHTML = `<i class="lg-green"></i>${t.greenLabel}`;
+        
+        legendItems[1].dataset.title = t.yellowTooltip;
+        legendItems[1].innerHTML = `<i class="lg-ok"></i>${t.yellowLabel}`;
+        
+        legendItems[2].dataset.title = t.orangeTooltip;
+        legendItems[2].innerHTML = `<i class="lg-orange"></i>${t.orangeLabel}`;
+        
+        legendItems[3].dataset.title = t.redTooltip;
+        legendItems[3].innerHTML = `<i class="lg-red"></i>${t.redLabel}`;
+      }
+      
+      const addModal = $('#addModal');
+      if (addModal) {
+        $('h3', addModal).textContent = t.addTitle;
+        const labels = $$('label', addModal);
+        if (labels.length >= 2) {
+          labels[0].innerHTML = `${t.addName}<br><input id="newName" style="width:100%;height:36px;border:1px solid var(--border);border-radius:8px;background:var(--muted);color:var(--text);padding:0 10px">`;
+          labels[1].innerHTML = `${t.addGroup}<br><select id="newGroup" style="width:100%;height:36px;border:1px solid var(--border);border-radius:8px;background:var(--muted);color:var(--text);padding:0 10px"></select>`;
+        }
+        $('#addCancel').textContent = t.btnCancel;
+        $('#addSave').textContent = t.btnAdd;
+      }
+      
+      const editModal = $('#editModal');
+      if (editModal) {
+        $('h3', editModal).textContent = t.editTitle;
+        const labels = $$('label', editModal);
+        if (labels.length >= 2) {
+          labels[0].innerHTML = `${t.addName}<br><input id="editName" style="width:100%;height:36px;border:1px solid var(--border);border-radius:8px;background:var(--muted);color:var(--text);padding:0 10px">`;
+          labels[1].innerHTML = `${t.addGroup}<br><select id="editGroup" style="width:100%;height:36px;border:1px solid var(--border);border-radius:8px;background:var(--muted);color:var(--text);padding:0 10px"></select>`;
+        }
+        $('#editCancel').textContent = t.btnCancel;
+        $('#editSave').textContent = t.btnSave;
+      }
+      
+      document.documentElement.lang = settings.language;
+    }
+
+    const debounce=(fn,ms=300)=>{let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms)}};
+    // Fix CSV parsing to handle empty lines and quotes properly 
+    const csvParse = (txt) => {
+        if (!txt?.trim()) return [];
+        const rows = [];
+        const lines = txt.split(/\r?\n/);
+        for (const line of lines) {
+            if (!line.trim()) continue;
+            const values = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+            if (values.some(v => v !== '')) rows.push(values);
+        }
+        return rows;
+    };
+    const isoWeek=(d)=>{const x=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const n=(x.getUTCDay()+6)%7;x.setUTCDate(x.getUTCDate()-n+3);const f=new Date(Date.UTC(x.getUTCFullYear(),0,4));return 1+Math.round((x-f)/604800000)};
+    const periodFromWeek=w=>{const s=w%2?w:w-1;return {start:s,end:s+1,key:`weeks${s}-${s+1}`,label:`${s}-${s+1}`}};
+    
+    // Configurable periodsBack to support future week pairs
+    // Returns periods in chronological order
+    const periodsBack=(startWeek,count=8,currentStartWeek=null)=>{
+      const periods=[];
+      const now=new Date();
+      const currentYear=now.getFullYear();
+      const weeksPerYear=52;
+      
+      const cmpStart = currentStartWeek !== null ? currentStartWeek : startWeek;
+      
+      for(let i=0;i<count;i++){
+        let weekNum=startWeek-(i*2);
+        let year=currentYear;
+        
+        while(weekNum<1){
+          year--;
+          weekNum+=weeksPerYear;
+        }
+        
+        // Handle values going forward past weeksPerYear
+        let actualWeek = weekNum;
+        let actualYear = year;
+        while(actualWeek > weeksPerYear) {
+          actualWeek -= weeksPerYear;
+          actualYear++;
+        }
+        
+        const start=actualWeek;
+        const end=actualWeek+1;
+        const key=`weeks${start}-${end}`;
+        const label=`${start}-${end}`;
+        const isCurrent = (actualWeek === cmpStart && actualYear === currentYear);
+        const isFuture = (actualYear > currentYear || (actualYear === currentYear && actualWeek > cmpStart));
+        
+        periods.push({start,end,key,label,isCurrent,isFuture,year:actualYear,weekNum:start});
+      }
+      
+      periods.sort((a, b) => {
+        const yearDiff = a.year - b.year;
+        if (yearDiff !== 0) return yearDiff;
+        return a.weekNum - b.weekNum;
+      });
+      
+      return periods;
+    };
+
+    // ========= state =========
+    let users=[], statuses={}, currentUserId=null, lastCsv='';
+    let periods=[]; // Will be initialized after CSV load
+    const now=new Date(); const w=isoWeek(now); const start=w%2?w:w-1;
+    const current=periodFromWeek(w); const currentKey=current.key;
+
+    // ========= DOM =========
+    const grid=$('#grid'); const userSelect=$('#userSelect'); const editBtn=$('#editUserBtn');
+    const notify=$('#notify');
+
+    // theme - Sync with navigation bar
+    (function initTheme(){
+      const saved=localStorage.getItem('theme'); 
+      const prefers=window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const theme=saved || (prefers?'dark':'light'); 
+      document.documentElement.setAttribute('data-theme', theme);
+      
+      // Watch for theme changes from navigation toggle
+      const observer = new MutationObserver(() => {
+          const isLight = document.body.classList.contains('light-mode');
+          const newTheme = isLight ? 'light' : 'dark';
+          document.documentElement.setAttribute('data-theme', newTheme);
+      });
+      observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+      
+      // Add listener for system theme changes
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+          if (!localStorage.getItem('theme')) {
+              const newTheme = e.matches ? 'dark' : 'light';
+              document.documentElement.setAttribute('data-theme', newTheme);
+          }
+      });
+    })();
+
+    // CSV I/O - Update paths
+    async function loadCSV(){
+        const dot = $('#conn-dot');
+        const text = $('#conn-text');
+        try {
+            const res = await fetch('/users.csv', {
+                cache: 'no-store',
+                headers: { 'Cache-Control': 'no-cache' }
+            });
+            
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+            if (dot) dot.style.background = '#10b981';
+            if (text) text.textContent = 'Connected';
+
+            const txt = await res.text();
+            console.log('CSV content:', txt.slice(0, 200) + '...'); // Debug log
+
+            if (txt === lastCsv) {
+                console.log('📋 No changes detected in CSV');
+                return false;
+            }
+            console.log('🔄 CSV has changes, processing...');
+            lastCsv = txt;
+
+            const rows = csvParse(txt).filter(r => r.length && r.some(x => x?.trim() !== ''));
+            console.log('✅ Parsed', rows.length, 'rows successfully');
+
+            if (!rows.length) {
+                console.error('❌ No valid rows found in CSV');
+                flash(translations[settings.language].dataNotFound);
+                return false;
+            }
+
+            // Extract unique groups
+            const groupSet = new Set();
+            rows.slice(1).forEach(r => {
+                if (r[1]?.trim()) groupSet.add(r[1].trim());
+            });
+            uniqueGroups = [...groupSet].sort();
+            console.log('👥 Found', uniqueGroups.length, 'groups:', uniqueGroups);
+
+            // Assign colors to groups
+            const groupColorPalette = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316'];
+            groupColors.clear();
+            uniqueGroups.forEach((group, index) => {
+                groupColors.set(group, groupColorPalette[index % groupColorPalette.length]);
+            });
+            // Add a default color for any unknown groups that might appear
+            groupColors.set('', '#64748b'); // Default color for empty group name
+
+            // Update group selectors in modals
+            const groupOptions = uniqueGroups.map(g => 
+                `<option value="${g}">${g}</option>`
+            ).join('');
+            $('#newGroup').innerHTML = groupOptions || '<option value="">Keine Gruppen</option>';
+            $('#editGroup').innerHTML = groupOptions || '<option value="">Keine Gruppen</option>';
+
+            // Parse user data
+            const headers = rows[0];
+            users = [];
+            statuses = {};
+
+            // Helper function to convert CSV column name to period key format
+            const normalizeWeekKey = (colName) => {
+                if (!colName) return null;
+                // Handle old format: weeks31-32
+                if (colName.startsWith('weeks')) {
+                    return colName;
+                }
+                // Handle new format: Week_2025-W02_2025-01-06 -> extract week number and convert
+                if (colName.startsWith('Week_')) {
+                    const match = colName.match(/Week_(\d{4})-W(\d+)_/);
+                    if (match) {
+                        const year = parseInt(match[1]);
+                        const weekNum = parseInt(match[2]);
+                        // Convert to pair week format (round down to even pair)
+                        const pairStart = weekNum % 2 === 1 ? weekNum : weekNum - 1;
+                        return `weeks${pairStart}-${pairStart + 1}`;
+                    }
+                }
+                return colName; // Return as-is if no match
+            };
+
+            // Build a mapping from normalized keys to original column names
+            const weekColumnMap = new Map();
+            for (let j = 3; j < headers.length; j++) {
+                const colName = headers[j]?.trim();
+                if (!colName) continue;
+                const normalized = normalizeWeekKey(colName);
+                if (normalized) {
+                    if (!weekColumnMap.has(normalized)) {
+                        weekColumnMap.set(normalized, []);
+                    }
+                    weekColumnMap.get(normalized).push(colName);
+                }
+            }
+
+            for (let i = 1; i < rows.length; i++) {
+                const r = rows[i];
+                if (!r[0]) continue;
+
+                const user = {
+                    id: r[0].trim(),
+                    group: (r[1] || uniqueGroups[0] || '').trim(),
+                    name: (r[2] || '').trim()
+                };
+                users.push(user);
+
+                // Parse status values - use normalized keys for matching
+                const statusMap = {};
+                for (let j = 3; j < Math.min(r.length, headers.length); j++) {
+                    const colName = headers[j]?.trim();
+                    if (!colName) continue;
+                    const normalized = normalizeWeekKey(colName);
+                    if (normalized) {
+                    const code = (r[j] || '').trim();
+                    const color = ({ '1': 'green', '2': 'yellow', '3': 'orange', '4': 'red' })[code];
+                        if (color) {
+                            // Store using normalized key for consistent lookup
+                            statusMap[normalized] = color;
+                        }
+                    }
+                }
+                statuses[user.id] = statusMap;
+            }
+
+            // Sort users by group and name
+            users.sort((a, b) => {
+                const groupOrder = uniqueGroups.indexOf(a.group) - uniqueGroups.indexOf(b.group);
+                return groupOrder || a.name.localeCompare(b.name, 'de', { sensitivity: 'base' });
+            });
+
+            // Generate periods including future weeks based on settings
+            const futurePeriodsCount = settings.futurePeriods !== undefined ? settings.futurePeriods : 1;
+            const startWeekWithFuture = start + (futurePeriodsCount * 2);
+            const totalCount = 8 + futurePeriodsCount;
+            const calculatedPeriods = periodsBack(startWeekWithFuture, totalCount, start);
+            const currentYear = new Date().getFullYear();
+            
+            // Sort periods chronologically: oldest to newest (by year, then by week)
+            // periodsBack already returns them in reverse order (oldest first), but let's ensure proper sorting
+            calculatedPeriods.sort((a, b) => {
+                const yearA = a.year !== undefined ? a.year : currentYear;
+                const yearB = b.year !== undefined ? b.year : currentYear;
+                const yearDiff = yearA - yearB;
+                if (yearDiff !== 0) return yearDiff;
+                const weekA = a.weekNum !== undefined ? a.weekNum : a.start;
+                const weekB = b.weekNum !== undefined ? b.weekNum : b.start;
+                return weekA - weekB;
+            });
+            
+            // Mark year boundaries for visual separator
+            for (let i = 1; i < calculatedPeriods.length; i++) {
+                const prev = calculatedPeriods[i - 1];
+                const curr = calculatedPeriods[i];
+                const prevYear = prev.year !== undefined ? prev.year : currentYear;
+                const currYear = curr.year !== undefined ? curr.year : currentYear;
+                if (prevYear !== currYear) {
+                    curr.isYearBoundary = true;
+                }
+            }
+            
+            periods = calculatedPeriods;
+            
+            // Auto-copy status from previous period if current period is empty
+            // This ensures users don't have to re-enter their status each week
+            let autoCopied = false;
+            for (const userId in statuses) {
+                const userStatuses = statuses[userId];
+                for (let i = 1; i < periods.length; i++) {
+                    const currentPeriod = periods[i];
+                    const previousPeriod = periods[i - 1];
+                    const currentKey = currentPeriod.key;
+                    const previousKey = previousPeriod.key;
+                    
+                    // If current period has no status but previous period does, copy it forward
+                    if (!userStatuses[currentKey] && userStatuses[previousKey]) {
+                        userStatuses[currentKey] = userStatuses[previousKey];
+                        autoCopied = true;
+                        console.log(`  → Auto-copied status for user ${userId}: ${previousKey} → ${currentKey}`);
+                    }
+                }
+            }
+            
+            // Save auto-copied values to CSV so they persist
+            if (autoCopied) {
+                console.log('💾 Auto-saving copied statuses to CSV...');
+                // Use a small delay to ensure the UI is updated first
+                setTimeout(() => {
+                    saveCsv();
+                }, 500);
+            }
+            
+            console.log('📅 Periods ordered (oldest to newest):', periods.map(p => `${p.label} (${p.year || currentYear})`).join(', '));
+
+            console.log('👤 Processed', users.length, 'users with status data');
+            console.log('📅 Generated', periods.length, 'periods:', periods.map(p => p.label).join(', '));
+            return true;
+        } catch (err) {
+            console.error('Error loading CSV:', err);
+            if (dot) dot.style.background = '#ef4444';
+            if (text) text.textContent = 'Disconnected';
+            flash(translations[settings.language].errorLoading);
+            return false;
+        }
+    }
+
+    // Update save function with correct path
+    // Save state tracking
+    let saveInProgress = false;
+    let pendingSave = false;
+
+    const saveCsv = async () => {
+        // If save is in progress, mark that we need another save
+        if (saveInProgress) {
+            pendingSave = true;
+            console.log('⏳ Save already in progress, will retry after completion');
+            return;
+        }
+
+        try {
+            saveInProgress = true;
+            console.log('📝 Preparing CSV data for save...');
+            
+            const set = new Set(periods.map(p => p.key));
+            Object.values(statuses).forEach(m => Object.keys(m).forEach(k => set.add(k)));
+            const ordered = [...set].sort((a, b) => Number(a.match(/\d+/)[0]) - Number(b.match(/\d+/)[0]));
+            const headers = ['id', 'group', 'name', ...ordered];
+            const rows = [headers];
+
+            for (const u of users) {
+                const row = [u.id, u.group, u.name];
+                for (const k of ordered) {
+                    const s = statuses[u.id]?.[k];
+                    row.push(s ? ({ green: '1', yellow: '2', orange: '3', red: '4' })[s] : '');
+                }
+                rows.push(row);
+            }
+
+            console.log(`📤 Sending ${rows.length} rows to server...`);
+            const res = await fetch('/save-csv', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ csvData: rows }),
+                signal: AbortSignal.timeout(10000) // 10 second timeout
+            });
+
+            if (!res.ok) {
+                const errorText = await res.text().catch(() => 'Unknown error');
+                throw new Error(`Save failed: ${res.status} - ${errorText}`);
+            }
+            
+            const result = await res.json();
+            console.log('✅ CSV saved successfully!', result);
+            
+        } catch (err) {
+            console.error('❌ Failed to save CSV:', err);
+            
+            // Show error indicator
+            const indicator = document.createElement('div');
+            indicator.id = 'saveIndicator';
+            indicator.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: rgba(239, 68, 68, 0.95);
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                z-index: 10000;
+                font-weight: 600;
+                animation: fadeIn 0.2s ease;
+            `;
+            indicator.textContent = '⚠ Fehler beim Speichern';
+            document.body.appendChild(indicator);
+            setTimeout(() => indicator.remove(), 3000);
+            
+            flash('⚠ Fehler beim Speichern! Bitte versuchen Sie es erneut.');
+        } finally {
+            saveInProgress = false;
+            
+            // If there was a pending save request, execute it now
+            if (pendingSave) {
+                pendingSave = false;
+                console.log('🔄 Executing pending save...');
+                setTimeout(() => saveCsv(), 100);
+            }
+        }
+    };
+
+    // Render
+    function renderSelect(){
+      const t = translations[settings.language] || translations.de;
+      userSelect.innerHTML = `<option value="" disabled selected>-- ${t.choosePerson} --</option>`;
+      const f = document.createDocumentFragment();
+      
+      // Sort users alphabetically by name for the dropdown
+      const sortedUsers = [...users].sort((a, b) => a.name.localeCompare(b.name, 'de', {sensitivity: 'base'}));
+      
+      for(const u of sortedUsers){ 
+        const o = document.createElement('option'); 
+        o.value = u.id; 
+        o.textContent = u.name; 
+        f.appendChild(o); 
+      }
+      userSelect.appendChild(f);
+      
+      // Only set a selected user if we had one previously
+      if(users.length && currentUserId && users.some(x => x.id === currentUserId)) { 
+        userSelect.value = currentUserId;
+        editBtn.disabled = false;
+      } else { 
+        currentUserId = null; 
+        editBtn.disabled = true; 
+      }
+    }
+    function updateStats(){
+      let g=0, y=0, o=0, r=0, total=0;
+      const redUsers = [];
+      
+      // Count statuses and collect red users
+      for(const u of users){ 
+        total++;
+        const s=statuses[u.id]?.[currentKey]; 
+        if(s==='green') g++; 
+        else if(s==='yellow') y++; 
+        else if(s==='orange') o++; 
+        else if(s==='red') {
+          r++;
+          redUsers.push(u.name);
+        }
+      }
+      
+      // Calculate percentages - ensure they add up to 100%
+      let gPct = total ? Math.round((g / total) * 100) : 0;
+      let yPct = total ? Math.round((y / total) * 100) : 0;
+      let oPct = total ? Math.round((o / total) * 100) : 0;
+      let rPct = total ? Math.round((r / total) * 100) : 0;
+      
+      // Adjust for rounding errors - ensure total is 100%
+      const totalPct = gPct + yPct + oPct + rPct;
+      if (totalPct < 100 && totalPct > 0) {
+        // Add the difference to the largest segment
+        const max = Math.max(gPct, yPct, oPct, rPct);
+        if (gPct === max) gPct += (100 - totalPct);
+        else if (yPct === max) yPct += (100 - totalPct);
+        else if (oPct === max) oPct += (100 - totalPct);
+        else if (rPct === max) rPct += (100 - totalPct);
+      } else if (totalPct > 100) {
+        // Subtract from the largest segment
+        const max = Math.max(gPct, yPct, oPct, rPct);
+        if (gPct === max) gPct -= (totalPct - 100);
+        else if (yPct === max) yPct -= (totalPct - 100);
+        else if (oPct === max) oPct -= (totalPct - 100);
+        else if (rPct === max) rPct -= (totalPct - 100);
+      }
+      
+      // Update bar widths
+      $('#superBar').style.width = `${gPct}%`;
+      $('#okBar').style.width = `${yPct}%`;
+      $('#fullBar').style.width = `${oPct}%`;
+      $('#overBar').style.width = `${rPct}%`;
+      
+      // Update labels - always show percentage for red (important), others if >= 5%
+      $('#superLabel').textContent = g > 0 && gPct >= 5 ? `${g} (${gPct}%)` : (g > 0 ? `${g}` : '');
+      $('#okLabel').textContent = y > 0 && yPct >= 5 ? `${y} (${yPct}%)` : (y > 0 ? `${y}` : '');
+      $('#fullLabel').textContent = o > 0 && oPct >= 5 ? `${o} (${oPct}%)` : (o > 0 ? `${o}` : '');
+      $('#overLabel').textContent = r > 0 ? `${r} (${rPct}%)` : ''; // Always show percentage for red status
+      
+      // Update red users list
+      const t = translations[settings.language] || translations.de;
+      const redUsersList = $('#redUsersList');
+      const redUsersNames = $('#redUsersNames');
+      const redUsersTitle = $('#redUsersTitle');
+      if (redUsersTitle) {
+        redUsersTitle.innerHTML = `
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style="flex-shrink:0;">
+            <path d="M8 1L1 15h14L8 1z"/>
+          </svg>
+          ${t.overload}
+        `;
+      }
+      if (redUsers.length > 0) {
+        redUsersNames.textContent = redUsers.join(', ');
+        redUsersList.style.display = 'block';
+      } else {
+        redUsersList.style.display = 'none';
+      }
+    }
+    function highlightRow(uid){
+      $$('.hl').forEach(el=>el.classList.remove('hl'));
+      if(!uid) return;
+      $$(`[data-user-id="${uid}"]`, grid).forEach(c=>c.classList.add('hl'));
+      const first=$(`.person[data-user-id="${uid}"]`); if(first) first.scrollIntoView({block:'center'});
+    }
+
+    function renderGrid(){
+      const t = translations[settings.language] || translations.de;
+      grid.setAttribute('aria-busy','true');
+      grid.style.setProperty('--period-count', periods.length);
+      const frag=document.createDocumentFragment();
+      // header
+      const h1=document.createElement('div'); h1.className='cell h c1'; h1.textContent=t.addGroup; frag.appendChild(h1);
+      const h2=document.createElement('div'); h2.className='cell h c2'; h2.textContent=t.addName; frag.appendChild(h2);
+      for(const p of periods){ 
+        const h=document.createElement('div'); 
+        h.className='cell h'+(p.isCurrent?' cur':'')+(p.isYearBoundary?' year-boundary':'')+(p.isFuture?' future':''); 
+        h.textContent=p.label; 
+        frag.appendChild(h); 
+      }
+      // group -> members
+      const byGroup=new Map();
+      for(const u of users){ if(!byGroup.has(u.group)) byGroup.set(u.group,[]); byGroup.get(u.group).push(u); }
+      for(const g of byGroup.keys()){ byGroup.get(g).sort((a,b)=> a.name.localeCompare(b.name,'de',{sensitivity: 'base'})); }
+
+      let row=1;
+      for(const [gid,members] of [...byGroup.entries()].sort((a,b) => {
+        // Sort groups alphabetically instead of trying to convert to numbers
+        return a[0].localeCompare(b[0], 'de', {sensitivity: 'base'});
+      })){
+        if(!members.length) continue;
+        const gcolor = groupColors.get(gid) || '#64748b';
+
+        // group sticky cell spanning all rows of this band
+        const gc=document.createElement('div');
+        gc.className='cell group'; gc.style.gridColumn='1';
+        gc.style.gridRow = `${row+1} / span ${members.length}`;
+        gc.style.setProperty('--gcolor', gcolor);
+        gc.innerHTML = `<span class="pill"><span class="rail"></span>${gid}</span>`;
+        frag.appendChild(gc);
+
+        for(const u of members){
+          // person sticky
+          const pc=document.createElement('div');
+          pc.className='cell person band'; pc.dataset.userId=u.id;
+          pc.style.setProperty('--gcolor', gcolor);
+          pc.innerHTML = `<span>${u.name}</span>`;
+          frag.appendChild(pc);
+
+          // periods
+          for(const p of periods){
+            const c=document.createElement('div');
+            const editable = currentUserId && u.id === currentUserId; // allow editing all periods for selected user
+            c.className = 'cell status band ' + (editable?'editable':'readonly') + (p.isYearBoundary?' year-boundary':'');
+            c.dataset.userId=u.id; c.dataset.periodKey=p.key;
+            c.style.setProperty('--gcolor', gcolor);
+            const s=statuses[u.id]?.[p.key]; const light=document.createElement('div');
+            light.className='light '+(s||'unset');
+            light.title = s ? `${u.name} – ${p.label}: ${statusName(s)}` : (editable?t.clickToSet:t.selectToEdit);
+            c.appendChild(light);
+            frag.appendChild(c);
+          }
+          row++;
+        }
+      }
+      grid.replaceChildren(frag);
+      grid.setAttribute('aria-busy','false');
+      highlightRow(currentUserId);
+      updateStats();
+    }
+
+    // interactions
+    function flash(msg){
+      const notify = $('#notify');
+      notify.textContent = msg;
+      notify.classList.add('show');
+      clearTimeout(flash._t);
+      flash._t = setTimeout(() => {
+        notify.classList.remove('show');
+      }, 2500);
+    }
+    grid.addEventListener('click', (e)=>{
+      const cell=e.target.closest('.cell.status'); if(!cell) return;
+      if(!cell.classList.contains('editable')){
+        if(!currentUserId) {
+          flash(translations[settings.language].selectPersonFirst);
+        } else {
+          flash(translations[settings.language].selectThisPersonFirst);
+        }
+        return;
+      }
+      
+      const uid=cell.dataset.userId, key=cell.dataset.periodKey;
+      const per=periods.find(p=>p.key===key);
+      
+      // Enforce Admin past week editing limits
+      const isCurrent = per ? per.isCurrent : (key === currentKey);
+      const isFuture = per ? per.isFuture : false;
+      const isPast = !isCurrent && !isFuture;
+      
+      if (isPast) {
+        if (settings.allowPastChanges === false) {
+          flash(translations[settings.language].pastEditDisabled);
+          return;
+        }
+        if (settings.pastWeeksLimit !== null && settings.pastWeeksLimit !== undefined) {
+          const limit = parseInt(settings.pastWeeksLimit);
+          if (limit >= 0) {
+            const periodIndex = periods.findIndex(p => p.key === key);
+            const currentIndex = periods.findIndex(p => p.isCurrent);
+            if (periodIndex !== -1 && currentIndex !== -1) {
+              const diff = currentIndex - periodIndex;
+              if (diff > limit) {
+                flash(translations[settings.language].pastLimitExceeded.replace('{limit}', limit));
+                return;
+              }
+            }
+          }
+        }
+      }
+      
+      const cur=statuses[uid]?.[key]; const next=STATUS[(STATUS.indexOf(cur)+1)%STATUS.length];
+      const u=users.find(x=>x.id===uid);
+      console.log(`🎯 STATUS CHANGE: ${u?.name} (${uid}) - ${per?.label || key}: ${cur || 'unset'} → ${next}`);
+      statuses[uid]=statuses[uid]||{}; statuses[uid][key]=next;
+      cell.querySelector('.light').className='light '+next;
+      console.log('💾 Saving changes to CSV...');
+      updateStats();
+      saveCsv();
+    });
+
+    userSelect.addEventListener('change', e=>{
+      const newUserId = e.target.value;
+      const user = users.find(u => u.id === newUserId);
+      console.log('👆 User selected:', user?.name || 'None', `(${newUserId || 'null'})`);
+      currentUserId = newUserId;
+      renderGrid();
+      editBtn.disabled = !currentUserId;
+    });
+
+    // modals quick
+    const open = id => $(id).style.display='grid';
+    const close = id => $(id).style.display='none';
+
+    $('#addUserBtn').addEventListener('click', ()=>open('#addModal'));
+    $('#addCancel').addEventListener('click', ()=>close('#addModal'));
+    $('#addSave').addEventListener('click', ()=>{
+      const name=$('#newName').value.trim(), group=$('#newGroup').value;
+      if(!name) {
+        flash(translations[settings.language].enterNameWarning);
+        return;
+      }
+      if(!group) {
+        flash(translations[settings.language].selectGroupWarning);
+        return;
+      }
+      const newUser = {id:String(Date.now()), name, group};
+      console.log('➕ Adding new user:', name, 'to group:', group);
+      users.push(newUser);
+      users.sort((a,b)=> a.name.localeCompare(b.name,'de',{sensitivity:'base'}));
+      renderSelect(); renderGrid(); saveCsv(); close('#addModal'); 
+      flash(`${name} ${translations[settings.language].addedMessage}`);
+    });
+
+    $('#editUserBtn').addEventListener('click', ()=>{
+      const u=users.find(x=>x.id===currentUserId); if(!u) return;
+      $('#editName').value=u.name; $('#editGroup').value=u.group; open('#editModal');
+    });
+    $('#editCancel').addEventListener('click', ()=>close('#editModal'));
+    $('#editSave').addEventListener('click', ()=>{
+      const u=users.find(x=>x.id===currentUserId); if(!u) return;
+      const oldName = u.name;
+      const oldGroup = u.group;
+      const newName = $('#editName').value.trim();
+      const newGroup = $('#editGroup').value;
+
+      console.log('✏️ Editing user:', oldName, '→', newName, ', group:', oldGroup, '→', newGroup);
+      u.name = newName;
+      u.group = newGroup;
+
+      if (oldGroup !== newGroup) {
+        users.sort((a,b) => a.name.localeCompare(b.name,'de',{sensitivity:'base'}));
+      }
+
+      renderSelect(); renderGrid(); saveCsv(); close('#editModal'); 
+      flash(`${u.name} ${translations[settings.language].updatedMessage}`);
+    });
+
+    // FAQ System
+    let faqs = [];
+    async function loadFAQs() {
+      try {
+        const res = await fetch('/api/faq');
+        if (res.ok) {
+          faqs = await res.json();
+          console.log('📚 FAQs loaded:', faqs.length);
+        }
+      } catch (err) {
+        console.error('Failed to load FAQs:', err);
+      }
+    }
+
+    function renderFAQs(filter = '') {
+      const faqList = $('#faqList');
+      if (!faqList) return;
+      
+      const query = filter.toLowerCase().trim();
+      const t = translations[settings.language] || translations.de;
+      
+      const filtered = faqs.filter(item => 
+        item.question.toLowerCase().includes(query) || 
+        item.answer.toLowerCase().includes(query)
+      );
+      
+      if (filtered.length === 0) {
+        faqList.innerHTML = `<div style="text-align:center;padding:20px;color:var(--text-muted);font-style:italic;">${t.faqNoResults}</div>`;
+        return;
+      }
+      
+      faqList.innerHTML = filtered.map(item => `
+        <div class="faq-item" style="border-bottom: 1px solid var(--border); padding: 12px 0;">
+          <h4 style="margin: 0 0 8px 0; color: var(--primary); font-family: var(--font-heading, 'Outfit', sans-serif); font-size: 15px; font-weight: 600;">${escapeHtml(item.question)}</h4>
+          <p style="margin: 0; font-size: 13.5px; color: var(--text-muted); line-height: 1.5;">${escapeHtml(item.answer)}</p>
+        </div>
+      `).join('');
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    $('#faqBtn').addEventListener('click', () => {
+      $('#faqSearch').value = '';
+      renderFAQs();
+      open('#faqModal');
+    });
+    $('#faqClose').addEventListener('click', () => close('#faqModal'));
+    $('#faqSearch').addEventListener('input', (e) => {
+      renderFAQs(e.target.value);
+    });
+
+    // init
+    try {
+      await loadSettings();
+      applyTranslations();
+      $('#badge').textContent = `${translations[settings.language].kw} ${w}`;
+      currentUserId = null; 
+      await loadCSV();
+      await loadFAQs();
+      renderSelect(); 
+      renderGrid();
+      
+      // Hide loading overlay
+      const overlay = $('#loading-overlay');
+      if (overlay) {
+        overlay.style.opacity = '0';
+        setTimeout(() => overlay.remove(), 500);
+      }
+
+      console.log('🚀 Marauder initialized successfully');
+    } catch (err) {
+      console.error('❌ Initialization failed:', err);
+      const loadingText = $('#loading-text');
+      if (loadingText) {
+        loadingText.innerHTML = `<span style="color:var(--red)">Error: ${err.message}</span><br><small>Check console for details</small>`;
+      }
+    }
+
+    setInterval(async()=>{ if(document.hidden) return; const changed=await loadCSV(); if(changed){ renderSelect(); renderGrid(); }},30000);
+  </script>
+
+</body>
+</html>
